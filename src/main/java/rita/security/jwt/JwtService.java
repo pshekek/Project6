@@ -1,13 +1,13 @@
 package rita.security.jwt;
 
 
-import DTO.JwtAuthenticationDTO;
+import org.springframework.stereotype.Service;
+import rita.dto.JwtAuthenticationDTO;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.time.LocalDateTime;
@@ -15,7 +15,7 @@ import java.time.ZoneId;
 import java.util.Date;
 
 @Slf4j
-@Component
+@Service
 public class JwtService {
 
     @Value("08cae397745cc2e92dc42e5869ee3995711bbb81585ad52c1a5208be4a5b334f4770c6bf")

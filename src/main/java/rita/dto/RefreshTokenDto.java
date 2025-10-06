@@ -1,4 +1,4 @@
-package DTO;
+package rita.dto;
 
 import lombok.Data;
 

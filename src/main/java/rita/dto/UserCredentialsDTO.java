@@ -1,4 +1,4 @@
-package DTO;
+package rita.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserCredentialsDTO {
-
     private String login;
     private String password;
 }
