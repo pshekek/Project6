@@ -14,7 +14,7 @@ import javax.validation.ValidationException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(AuthenticationException.class)
+    @ExceptionHandler({AuthenticationException.class})
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ResponseEntity<BaseResponse<Object>> authenticationException(AuthenticationException e) {
         return ResponseEntity

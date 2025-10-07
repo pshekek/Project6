@@ -1,14 +1,16 @@
 package rita.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserCredentialsDTO {
-
+public class AuthResponse {
     private String username;
-    private String password;
+    private String token;
+    private String refreshToken;
 }

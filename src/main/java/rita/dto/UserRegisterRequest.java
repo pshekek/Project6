@@ -10,8 +10,8 @@ import javax.validation.constraints.Size;
 @Getter
 public class UserRegisterRequest {
     @NotBlank(message = "Введите юзернейм")
-    private String userName;
+    private String username;
 
-    @Size(min = 6, message = "Пароль должен содержать минимум 6 символов")
+    @NotBlank(message = "Введите пароль")
     private String password;
 }

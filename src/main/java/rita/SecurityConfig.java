@@ -18,7 +18,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import rita.security.jwt.JwtFilter;
 
-@Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 @EnableMethodSecurity
@@ -46,8 +45,9 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/css/**"),
                                 new AntPathRequestMatcher("/js/**"),
                                 new AntPathRequestMatcher("/images/**"),
-                                new AntPathRequestMatcher("/auth/sign-in"),
-                                new AntPathRequestMatcher("/auth/refresh")
+                                new AntPathRequestMatcher("/api/auth/sign-in"),
+                                new AntPathRequestMatcher("/api/auth/sign-up"),
+                                new AntPathRequestMatcher("/registration")
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

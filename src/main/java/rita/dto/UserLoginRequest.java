@@ -9,7 +9,7 @@ import javax.validation.constraints.NotBlank;
 @Setter
 public class UserLoginRequest {
     @NotBlank(message = "Введите юзернейм")
-    private String userName;
+    private String username;
     @NotBlank(message = "Введите пароль")
     private String password;
 }

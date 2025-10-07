@@ -1,3 +1,6 @@
+jwt:
+  secret: 32fjs3dlw4ufs83fn4o9fwl93fins5dl3993k
+
 spring:
   application:
     name: Project6
