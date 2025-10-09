@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .addFilterAt(jsonAuthFilter, UsernamePasswordAuthenticationFilter.class)
 
                 .logout(logout -> logout
-                        .logoutUrl("/auth/sign-out")
+                        .logoutUrl("/api/auth/sign-out")
                         .logoutSuccessHandler((request, response, authentication) -> {
                             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
                         })

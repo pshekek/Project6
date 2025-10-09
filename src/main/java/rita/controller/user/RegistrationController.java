@@ -1,4 +1,4 @@
-package rita.controller;
+package rita.controller.user;
 
 
 import lombok.RequiredArgsConstructor;

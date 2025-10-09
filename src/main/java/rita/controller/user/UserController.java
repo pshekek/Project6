@@ -1,4 +1,4 @@
-package rita.controller;
+package rita.controller.user;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
