@@ -1,35 +1,44 @@
 package rita.controller;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import rita.dto.UserDto;
-import rita.repository.UserRepository;
-import rita.security.jwt.JwtService;
-import rita.service.UserService;
+
+
+import java.util.Map;
+
+//@RestController
+//@RequestMapping("api/user")
+//@RequiredArgsConstructor
+//public class UserController {
+//
+//    private final UserService userService;
+//    private final UserRepository userRepository;
+//
+//    @GetMapping("/me")
+//    public ResponseEntity<UserDto> getCurrentUser() {
+//        Authentication authentication = SecurityContextHolder
+//                .getContext()
+//                .getAuthentication();
+//        String username = authentication.getName();
+//        UserDto userDto = new UserDto();
+//        userDto.setUsername(username);
+//        return ResponseEntity.ok(userDto);
+//    }
+//}
 
 @RestController
-@RequestMapping("api/user")
-@RequiredArgsConstructor
+@RequestMapping("/api/user")
 public class UserController {
 
-    private final UserService userService;
-    private final UserRepository userRepository;
-    private final JwtService jwtService;
-
-
     @GetMapping("/me")
-    public ResponseEntity<UserDto> getCurrentUser() {
-        Authentication authentication = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
-        String username = authentication.getName();
-        UserDto userDto = new UserDto();
-        userDto.setUsername(username);
-        return ResponseEntity.ok(userDto);
+    public ResponseEntity<?> getMe(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(Map.of("username", authentication.getName()));
     }
 }

@@ -39,4 +39,4 @@ logging:
 
   level:
     root: INFO
-    org.springframework: TRACE
+    org.springframework: debug
