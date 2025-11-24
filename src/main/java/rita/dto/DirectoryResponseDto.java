@@ -12,10 +12,9 @@ import rita.repository.Type;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ResourceResponseDto {
-
+public class DirectoryResponseDto {
     private String path;
     private String name;
-    private Long size;
     private Type type;
 }
+

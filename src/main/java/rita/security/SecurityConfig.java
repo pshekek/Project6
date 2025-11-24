@@ -28,8 +28,6 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authManager) throws Exception {
         JsonAuthenticationFilter jsonAuthFilter = new JsonAuthenticationFilter(authManager);
-//        jsonAuthFilter.setAuthenticationSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK));
-//        jsonAuthFilter.setAuthenticationFailureHandler((req, res, ex) -> res.setStatus(HttpServletResponse.SC_UNAUTHORIZED));
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -46,6 +44,8 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/auth/sign-in"),
                                 new AntPathRequestMatcher("/api/auth/sign-up"),
                                 new AntPathRequestMatcher("/api/auth/sign-in"),
+                                new AntPathRequestMatcher("/login"),
+                                new AntPathRequestMatcher("/registration"),
                                 new AntPathRequestMatcher("/auth/sign-up")
                                 ).permitAll()
                         .anyRequest().authenticated()

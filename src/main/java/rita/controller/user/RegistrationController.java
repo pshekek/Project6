@@ -8,8 +8,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import rita.dto.UserDto;
 import rita.dto.UserRegisterRequest;
+import rita.dto.UsernameResponse;
 import rita.service.UserService;
+
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.util.Map;
 
@@ -22,9 +26,10 @@ public class RegistrationController {
 
 
     @PostMapping("/sign-up")
-    public ResponseEntity<?> createUser(@RequestBody @Valid UserRegisterRequest request) {
-        userService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("success", true, "message", "Пользователь создан"));
+    public ResponseEntity<UsernameResponse> createUser(@RequestBody @Valid UserRegisterRequest request, HttpServletRequest httpRequest) {
+        UserDto user = userService.create(request, httpRequest);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new UsernameResponse(user.getUsername()));
 
     }
 }
