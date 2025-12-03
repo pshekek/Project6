@@ -17,14 +17,12 @@ public class DirectoryController {
     private final MinioService minioService;
 
     @GetMapping
-    public ResponseEntity<?> showAllFilesFromFolder(@RequestParam("path") String path, Principal principal) {
-        String username = principal.getName();
-        return minioService.showAllFilesFromFolder(path, username);
+    public ResponseEntity<?> showAllFilesFromFolder(@RequestParam("path") String path) {
+        return minioService.showAllFilesFromFolder(path);
     }
 
     @PostMapping
-    public ResponseEntity<?> createEmptyDirectory(@RequestParam("path") String path, Principal principal) {
-        String username = principal.getName();
-        return minioService.createEmptyDirectory(path, username);
+    public ResponseEntity<?> createEmptyDirectory(@RequestParam("path") String path) {
+        return minioService.createEmptyDirectory(path);
     }
 }

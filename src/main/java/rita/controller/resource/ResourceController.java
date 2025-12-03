@@ -26,10 +26,8 @@ public class ResourceController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadResource(@RequestParam("object") MultipartFile file,
-                                            @RequestParam("path") String path,
-                                            Principal principal) {
-        String username = principal.getName();
-        return minioService.uploadFile(file,path,username);
+                                            @RequestParam("path") String path) {
+        return minioService.uploadFile(file,path);
     }
 
 
@@ -46,10 +44,12 @@ public class ResourceController {
 
     @GetMapping(path = "/move")
     public ResponseEntity<?> moveResource(@RequestParam("from") String from,
-                                          @RequestParam("to") String to,
-                                          Principal principal) {
-        String username = principal.getName();
-        return minioService.moveOrRenameResource(from, to, username);
+                                          @RequestParam("to") String to) {
+        return minioService.moveOrRenameResource(from, to);
     }
 
+    @GetMapping(path = "/search")
+    public ResponseEntity<?> searchResource(@RequestParam("query") String query) {
+        return minioService.searchResource(query);
+    }
 }

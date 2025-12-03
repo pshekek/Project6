@@ -7,6 +7,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import rita.repository.User;
 import rita.repository.UserRepository;
+import rita.security.MyUserDetails;
 
 @Service
 @RequiredArgsConstructor
@@ -18,11 +19,8 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return org.springframework.security.core.userdetails.User
-                .withUsername(user.getUsername())
-                .password(user.getPassword())
-                .authorities("ROLE_USER")
-                .build();
+
+        return new MyUserDetails(user);
     }
 }
 

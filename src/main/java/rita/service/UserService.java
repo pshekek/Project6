@@ -52,7 +52,6 @@ public class UserService {
     private final UserMapping userMapping;
     private final AuthenticationManager authManager;
 
-
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public UserDto create(@Valid UserRegisterRequest request, HttpServletRequest httpRequest) {
 
