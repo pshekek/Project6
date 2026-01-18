@@ -1,5 +1,7 @@
 package rita.controller.user;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,8 +19,12 @@ import java.util.Map;
 @RequestMapping("/api/user")
 public class UserController {
 
+    @Operation(
+            summary = "Получает текущего пользователя по id"
+    )
     @GetMapping("/me")
-    public ResponseEntity<UsernameResponse> getCurrentUser(Principal principal) {
+    public ResponseEntity<UsernameResponse> getCurrentUser(@Parameter(description = "Данные пользователя из Spring")
+                                                               Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }

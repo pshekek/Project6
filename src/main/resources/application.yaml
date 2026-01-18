@@ -48,3 +48,6 @@ minio:
   access-key: admin
   secret-key: adminadmin
   bucket: user-files
+
+liquibase:
+  change-log: classpath:db/changelog/db.changelog-master.yaml

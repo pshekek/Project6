@@ -1,6 +1,8 @@
 package rita.controller.user;
 
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +26,12 @@ public class RegistrationController {
 
     private final UserService userService;
 
+    @Operation(
+            summary = "Создаёт нового пользователя"
+    )
 
     @PostMapping("/sign-up")
-    public ResponseEntity<UsernameResponse> createUser(@RequestBody @Valid UserRegisterRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<UsernameResponse> createUser(@RequestBody @Parameter(description = "Данные нового пользователя") @Valid UserRegisterRequest request, HttpServletRequest httpRequest) {
         UserDto user = userService.create(request, httpRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new UsernameResponse(user.getUsername()));

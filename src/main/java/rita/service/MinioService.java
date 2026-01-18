@@ -1,7 +1,9 @@
 package rita.service;
 
 import io.minio.*;
+import io.minio.errors.ErrorResponseException;
 import io.minio.messages.Item;
+import liquibase.pro.packaged.S;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.core.io.InputStreamResource;
@@ -14,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import rita.dto.DirectoryResponseDto;
+import rita.dto.MessageDto;
 import rita.dto.ResourceResponseDto;
 import rita.exeptions.EntityAlreadyExistsException;
 import rita.repository.Resource;
@@ -50,7 +53,8 @@ public class MinioService {
     public ResponseEntity<?> getInfo(String clientPath) {
 
         if (clientPath == null || clientPath.isEmpty()) {
-            throw new ValidationException("Отсутствует путь");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new MessageDto("Невалидный или отсутствующий путь"));
         }
 
         Long userId = getCurrentUserId();
@@ -67,7 +71,8 @@ public class MinioService {
             );
         } catch (io.minio.errors.ErrorResponseException e) {
             if ("NoSuchKey".equals(e.errorResponse().code())) {
-                throw new EntityNotFoundException("Ресурс не найден: " + path);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new MessageDto("Ресурс не найден"));
             }
             throw new RuntimeException("Неизвестная ошибка Minio: " + e.errorResponse().message());
         } catch (Exception e) {
@@ -94,10 +99,11 @@ public class MinioService {
         }
     }
 
-    public void deleteResource(String clientPath) {
+    public ResponseEntity<?> deleteResource(String clientPath) {
 
         if (clientPath == null || clientPath.isEmpty()) {
-            throw new ValidationException("Отсутствует путь");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new MessageDto("Невалидный или отсутствующий путь"));
         }
 
         Long userId = getCurrentUserId();
@@ -129,6 +135,7 @@ public class MinioService {
                 throw new RuntimeException("Ошибка удаления из minio", e);
             }
         }
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     public ResponseEntity<?> downloadResource(String clientPath) {
@@ -136,7 +143,7 @@ public class MinioService {
         if (clientPath == null || clientPath.isEmpty()) {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body("Невалидный или отсутствующий путь");
+                    .body(new MessageDto("Невалидный или отсутствующий путь"));
         }
         Long userId = getCurrentUserId();
         String path = buildFullPath(clientPath, userId);
@@ -158,7 +165,7 @@ public class MinioService {
                 } catch (Exception e) {
                     return ResponseEntity
                             .status(HttpStatus.NOT_FOUND)
-                            .body("Ресурс не найден");
+                            .body(new MessageDto("Ресурс не найден"));
                 }
             else {
                 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -193,9 +200,9 @@ public class MinioService {
                     }
                 }
                 if (!hasFiles) {
-                    return ResponseEntity
-                            .status(HttpStatus.NOT_FOUND)
-                            .body("Папка пуста или не найдена");
+                    ZipEntry emptyDir = new ZipEntry(fileName + "/");
+                    zipOut.putNextEntry(emptyDir);
+                    zipOut.closeEntry();
                 }
                 zipOut.close();
 
@@ -211,14 +218,20 @@ public class MinioService {
         } catch (Exception e) {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Неизвестная ошибка при скачивании файла");
+                    .body(new MessageDto("Неизвестная ошибка при скачивании файла"));
         }
     }
 
 
     public ResponseEntity<?> showAllFilesFromFolder(String clientPath) {
+
         Long userId = getCurrentUserId();
         String path = buildFullPath(clientPath, userId);
+
+        if (!clientPath.isEmpty() && !isFolderExists(path)) {
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageDto("Папки не существует"));
+        }
 
         List<ResourceResponseDto> files = new ArrayList<>();
         try {
@@ -246,44 +259,56 @@ public class MinioService {
     }
 
 
-    public ResponseEntity<?> uploadFile(MultipartFile multipartFile, String clientPath) {
+    public ResponseEntity<?> uploadFile(List<MultipartFile> multipartFiles, String clientPath) {
         Long userId = getCurrentUserId();
-        String path = buildFullPath(clientPath, userId);
-        String fileName;
-        try {
-            InputStream inputStream = minioClient.getObject(
-                    GetObjectArgs.builder()
-                            .bucket("user-files")
-                            .object(path)
-                            .build()
-            );}
-        catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
-        try (InputStream inputStream = multipartFile.getInputStream()) {
-            fileName = multipartFile.getOriginalFilename();
+        List<ResourceResponseDto> files = new ArrayList<>();
+        for (MultipartFile multipartFile : multipartFiles) {
+            String fileName = multipartFile.getOriginalFilename();
             validateName(getNameFromPath(fileName));
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket("user-files")
-                            .object(path + "/" + fileName)
-                            .stream(inputStream, multipartFile.getSize(), -1)
-                            .contentType(multipartFile.getContentType())
-                            .build());
+            String fullClientPath = clientPath + fileName;
+            String path = buildFullPath(fullClientPath, userId);
+            try {
+                minioClient.statObject(
+                        StatObjectArgs.builder()
+                                .bucket("user-files")
+                                .object(path)
+                                .build()
+                );
 
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new MessageDto("Файл с таким именем уже существует"));
+
+            } catch (io.minio.errors.ErrorResponseException ex) {
+                if (ex.errorResponse().code().equals("NoSuchKey")) {
+                } else {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+                }
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+            try (InputStream inputStream = multipartFile.getInputStream()) {
+                minioClient.putObject(
+                        PutObjectArgs.builder()
+                                .bucket("user-files")
+                                .object(path)
+                                .stream(inputStream, multipartFile.getSize(), -1)
+                                .contentType(multipartFile.getContentType())
+                                .build());
+
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+            String displayName = getNameFromPath(fileName);
+            files.add(new ResourceResponseDto(
+                    getParentFolder(path),
+                    displayName,
+                    multipartFile.getSize(),
+                    multipartFile.getOriginalFilename().endsWith("/") ? DIRECTORY : FILE
+            ));
         }
-        String originalFileName = multipartFile.getOriginalFilename();
-        String displayName = getNameFromPath(originalFileName);
-        List<ResourceResponseDto> files = List.of(new ResourceResponseDto(
-                getParentFolder(path),
-                displayName,
-                multipartFile.getSize(),
-                multipartFile.getName().endsWith("/") ? DIRECTORY : FILE));
-
         return ResponseEntity.status(HttpStatus.CREATED).body(files);
     }
+
 
     public ResponseEntity<?> moveOrRenameResource(String fromClient, String toClient) {
         Long userId = getCurrentUserId();
@@ -296,54 +321,78 @@ public class MinioService {
         if (from.equals(to)) {
             return ResponseEntity.status(HttpStatus.OK).build();
         }
-        try {
-            InputStream inputStream = minioClient.getObject(
-                GetObjectArgs.builder()
-                        .bucket("user-files")
-                        .object(to)
-                        .build()
-        );}
-        catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
 
         try {
-            minioClient.copyObject(
-                    CopyObjectArgs.builder()
-                            .bucket("user-files")
-                            .object(to)
-                            .source(CopySource.builder()
+            boolean notExist = isNotExist(to);
+            if (notExist) {
+                try {
+                    Iterable<Result<Item>> results = minioClient.listObjects(
+                            ListObjectsArgs.builder()
                                     .bucket("user-files")
-                                    .object(from)
-                                    .build())
-                            .build()
-            );
+                                    .prefix(from)
+                                    .recursive(true)
+                                    .build()
+                    );
+                    for (Result<Item> result : results) {
+                        Item item = result.get();
+                        String oldObject = item.objectName();
+                        String relative = oldObject.substring(from.length());
+                        String newObject = to + relative;
 
-            minioClient.removeObject(RemoveObjectArgs.builder()
-                    .bucket("user-files")
-                    .object(from)
-                    .build()
-            );
-            StatObjectResponse info = minioClient.statObject(
-                    StatObjectArgs.builder()
-                            .bucket("user-files")
-                            .object(to)
-                            .build()
-            );
-            if (from.endsWith("/")) {
-                DirectoryResponseDto directoryResponseDto = new DirectoryResponseDto(
-                        getParentFolder(to),
-                        getNameFromPath(to),
-                        DIRECTORY);
-                return ResponseEntity.status(HttpStatus.OK).body(directoryResponseDto);
+                        minioClient.copyObject(
+                                CopyObjectArgs.builder()
+                                        .bucket("user-files")
+                                        .object(newObject)
+                                        .source(CopySource.builder()
+                                                .bucket("user-files")
+                                                .object(oldObject)
+                                                .build())
+                                        .build()
+                        );
+
+                    }
+                    for (Result<Item> result : minioClient.listObjects(
+                            ListObjectsArgs.builder()
+                                    .bucket("user-files")
+                                    .prefix(from)
+                                    .recursive(true)
+                                    .build()
+                    )) {
+                        minioClient.removeObject(RemoveObjectArgs.builder()
+                                .bucket("user-files")
+                                .object(result.get().objectName())
+                                .build()
+                        );
+                    }
+
+                } catch (Exception e) {
+                    return ResponseEntity.ok(Collections.emptyList());
+                }
+
+                if (from.endsWith("/")) {
+                    DirectoryResponseDto directoryResponseDto = new DirectoryResponseDto(
+                            getParentFolder(to),
+                            getNameFromPath(to),
+                            DIRECTORY);
+                    return ResponseEntity.status(HttpStatus.OK).body(directoryResponseDto);
+                } else {
+                    StatObjectResponse info = minioClient.statObject(
+                            StatObjectArgs.builder()
+                                    .bucket("user-files")
+                                    .object(to)
+                                    .build()
+                    );
+                    ResourceResponseDto resource = new ResourceResponseDto(
+                            getParentFolder(to),
+                            getNameFromPath(to),
+                            info.size(),
+                            FILE);
+                    return ResponseEntity.status(HttpStatus.OK).body(resource);
+                }
+            } else {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new MessageDto("Файл с таким именем уже существует"));
             }
-            ResourceResponseDto resource = new ResourceResponseDto(
-                    getParentFolder(to),
-                    getNameFromPath(to),
-                    info.size(),
-                    FILE);
-            return ResponseEntity.status(HttpStatus.OK).body(resource);
-
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -354,29 +403,38 @@ public class MinioService {
         String path = buildFullPath(clientPath, userId);
 
         validateName(getNameFromPath(clientPath));
+
         try {
-            InputStream emptyFolder = new ByteArrayInputStream(new byte[]{});
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket("user-files")
-                            .object(path)
-                            .stream(emptyFolder, 0, 0)
-                            .build()
-            );
+            boolean notExist = isNotExist(path);
+            if (notExist) {
+                InputStream emptyFolder = new ByteArrayInputStream(new byte[]{});
+                minioClient.putObject(
+                        PutObjectArgs.builder()
+                                .bucket("user-files")
+                                .object(path)
+                                .stream(emptyFolder, 0, 0)
+                                .build()
+                );
+
+                String displayName = getNameFromPath(path);
+                String rootFolder = getParentFolder(path);
+                return ResponseEntity.status(HttpStatus.CREATED).body(
+                        new DirectoryResponseDto(
+                                rootFolder,
+                                displayName,
+                                DIRECTORY
+                        ));
+            } else {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new MessageDto("Файл с таким именем уже существует"));
+            }
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        String displayName = getNameFromPath(path);
-        String rootFolder = getParentFolder(path);
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                new DirectoryResponseDto(
-                        rootFolder,
-                        displayName,
-                        DIRECTORY
-                ));
     }
 
-    public ResponseEntity<?> searchResource (String query) {
+    public ResponseEntity<?> searchResource(String query) {
         Long userId = getCurrentUserId();
         String path = buildFullPath("", userId);
         validateName(query);
@@ -390,31 +448,24 @@ public class MinioService {
             );
             for (Result<Item> result : results) {
 
-            if (result.get().objectName().contains(query)) {
-                String parentFolder = getParentFolder(result.get().objectName());
-                if (parentFolder.equals(getNameFromPath(result.get().objectName()))) {
-                    parentFolder = getNameFromPath(result.get().objectName()).replaceAll("[^/]", "");
+                if (result.get().objectName().contains(query)) {
+                    String parentFolder = getParentFolder(result.get().objectName());
+                    if (parentFolder.equals(getNameFromPath(result.get().objectName()))) {
+                        parentFolder = getNameFromPath(result.get().objectName()).replaceAll("[^/]", "");
+                    }
+                    files.add(new ResourceResponseDto(
+                            parentFolder,
+                            getNameFromPath(result.get().objectName()),
+                            result.get().size(),
+                            result.get().objectName().endsWith("/") ? DIRECTORY : FILE
+                    ));
                 }
-                files.add(new ResourceResponseDto(
-                        parentFolder,
-                        getNameFromPath(result.get().objectName()),
-                        result.get().size(),
-                        result.get().objectName().endsWith("/") ? DIRECTORY : FILE
-                ));
             }
-            }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
         return ResponseEntity.ok(files);
     }
-
-
-
-
-
-
 
 
     public String getNameFromPath(String path) {
@@ -477,6 +528,52 @@ public class MinioService {
                 throw new ValidationException("Недопустимый управляющий символ");
             }
         }
+    }
+
+    private boolean isNotExist(String path) throws Exception {
+        try {
+            minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket("user-files")
+                            .object(path)
+                            .build()
+            );
+            return false;
+
+        } catch (io.minio.errors.ErrorResponseException ex) {
+            if (ex.errorResponse().code().equals("NoSuchKey")) {
+                return true;
+            }
+            throw ex;
+        }
+    }
+
+    boolean isFolderExists(String path) {
+        try {
+            Iterable<Result<Item>> results = minioClient.listObjects(
+                    ListObjectsArgs.builder()
+                            .bucket("user-files")
+                            .prefix(path)
+                            .build()
+            );
+            boolean isFolder = path.endsWith("/");
+            for (Result<Item> result : results) {
+                Item item = result.get();
+                String name = item.objectName();
+                if (isFolder) {
+                    if (name.startsWith(path)) {
+                        return true;
+                    } else return false;
+                } else {
+                    if (getParentFolder(name).equals(getParentFolder(path))) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        return false;
     }
 }
 

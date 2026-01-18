@@ -33,6 +33,7 @@ import rita.repository.UserRepository;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import javax.validation.ValidationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -59,6 +60,9 @@ public class UserService {
             throw new EntityAlreadyExistsException("Пользователь с именем " + user.getUsername()
                     + " уже существует");
         });
+        if (request.getUsername().length() < 5) {
+            throw new ValidationException("Юзернейм должен быть больше 5 символов");
+        }
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         User userToCreate = new User();
         userToCreate.setPassword(encodedPassword);
