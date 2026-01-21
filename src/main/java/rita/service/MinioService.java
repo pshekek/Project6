@@ -1,9 +1,7 @@
 package rita.service;
 
 import io.minio.*;
-import io.minio.errors.ErrorResponseException;
 import io.minio.messages.Item;
-import liquibase.pro.packaged.S;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.core.io.InputStreamResource;
@@ -11,24 +9,18 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import rita.dto.DirectoryResponseDto;
 import rita.dto.MessageDto;
 import rita.dto.ResourceResponseDto;
-import rita.exeptions.EntityAlreadyExistsException;
-import rita.repository.Resource;
 import rita.repository.UserRepository;
-import rita.security.MyUserDetails;
+import rita.security.AuthenticationHelperImpl;
 
-import javax.persistence.EntityNotFoundException;
 import javax.validation.ValidationException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -43,6 +35,7 @@ import static rita.repository.Type.FILE;
 public class MinioService {
 
     private final MinioClient minioClient;
+    private final AuthenticationHelperImpl authenticationHelper;
     private final UserRepository userRepository;
     private static final String USER_PREFIX = "user-%d-files/";
     private static final Set<Character> INVALID_CHARS = Set.of(
@@ -57,7 +50,7 @@ public class MinioService {
                     .body(new MessageDto("Невалидный или отсутствующий путь"));
         }
 
-        Long userId = getCurrentUserId();
+        Long userId = authenticationHelper.getCurrentUserId();
         String path = buildFullPath(clientPath, userId);
 
         StatObjectResponse statObject;
@@ -106,7 +99,7 @@ public class MinioService {
                     .body(new MessageDto("Невалидный или отсутствующий путь"));
         }
 
-        Long userId = getCurrentUserId();
+        Long userId = authenticationHelper.getCurrentUserId();
         String path = buildFullPath(clientPath, userId);
 
         Iterable<Result<Item>> results = minioClient.listObjects(
@@ -145,7 +138,7 @@ public class MinioService {
                     .status(HttpStatus.BAD_REQUEST)
                     .body(new MessageDto("Невалидный или отсутствующий путь"));
         }
-        Long userId = getCurrentUserId();
+        Long userId = authenticationHelper.getCurrentUserId();
         String path = buildFullPath(clientPath, userId);
 
         try {
@@ -225,7 +218,7 @@ public class MinioService {
 
     public ResponseEntity<?> showAllFilesFromFolder(String clientPath) {
 
-        Long userId = getCurrentUserId();
+        Long userId = authenticationHelper.getCurrentUserId();
         String path = buildFullPath(clientPath, userId);
 
         if (!clientPath.isEmpty() && !isFolderExists(path)) {
@@ -260,7 +253,7 @@ public class MinioService {
 
 
     public ResponseEntity<?> uploadFile(List<MultipartFile> multipartFiles, String clientPath) {
-        Long userId = getCurrentUserId();
+        Long userId = authenticationHelper.getCurrentUserId();
         List<ResourceResponseDto> files = new ArrayList<>();
         for (MultipartFile multipartFile : multipartFiles) {
             String fileName = multipartFile.getOriginalFilename();
@@ -311,7 +304,7 @@ public class MinioService {
 
 
     public ResponseEntity<?> moveOrRenameResource(String fromClient, String toClient) {
-        Long userId = getCurrentUserId();
+        Long userId = authenticationHelper.getCurrentUserId();
 
         String from = buildFullPath(fromClient, userId);
         String to = buildFullPath(toClient, userId);
@@ -399,7 +392,7 @@ public class MinioService {
     }
 
     public ResponseEntity<?> createEmptyDirectory(String clientPath) {
-        Long userId = getCurrentUserId();
+        Long userId = authenticationHelper.getCurrentUserId();
         String path = buildFullPath(clientPath, userId);
 
         validateName(getNameFromPath(clientPath));
@@ -435,7 +428,7 @@ public class MinioService {
     }
 
     public ResponseEntity<?> searchResource(String query) {
-        Long userId = getCurrentUserId();
+        Long userId = authenticationHelper.getCurrentUserId();
         String path = buildFullPath("", userId);
         validateName(query);
         List<ResourceResponseDto> files = new ArrayList<>();
@@ -487,10 +480,7 @@ public class MinioService {
         return USER_PREFIX.formatted(userId);
     }
 
-    private Long getCurrentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return ((MyUserDetails) auth.getPrincipal()).getId();
-    }
+
 
     private String buildFullPath(String clientPath, Long userId) {
         if (clientPath.startsWith("/")) {

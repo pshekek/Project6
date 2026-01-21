@@ -60,11 +60,7 @@ class RegistrationControllerTest {
 
     private static final String SIGN_UP_URL = "/api/auth/sign-up";
 
-    @MockBean
-    private MinioService minioService;
 
-    @MockBean
-    private MinioClient minioClient;
 
     @BeforeEach
     void setUp() {

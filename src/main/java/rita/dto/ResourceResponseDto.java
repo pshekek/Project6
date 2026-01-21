@@ -1,10 +1,7 @@
 package rita.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import rita.repository.Type;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -12,6 +9,7 @@ import rita.repository.Type;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode
 public class ResourceResponseDto {
 
     private String path;

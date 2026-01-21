@@ -1,5 +1,6 @@
 package rita.service;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -8,6 +9,8 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import rita.dto.UserDto;
 import rita.dto.UserRegisterRequest;
@@ -16,6 +19,7 @@ import rita.mapping.UserMapping;
 import rita.repository.User;
 import rita.repository.UserRepository;
 
+import javax.persistence.EntityNotFoundException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.validation.ValidationException;
@@ -42,15 +46,13 @@ public class UserServiceTest {
     @Mock
     private HttpServletRequest httpRequest;
 
-    @Mock
-    private HttpSession httpSession;
-
     @InjectMocks
     private UserService userService;
 
 
     @Test
-    public void create_whenUserAlreadyExists_shouldThrowException() {
+    @DisplayName("Test user already exists")
+    public void givenUser_whenUserAlreadyExists_thenThrowEntityAlreadyExistsException() {
 
         UserRegisterRequest request = new UserRegisterRequest("user123", "password");
 
@@ -62,7 +64,8 @@ public class UserServiceTest {
     }
 
     @Test
-    void create_whenUsernameTooShort_shouldThrowValidationException() {
+    @DisplayName("Test username is too short")
+    void givenUser_whenUsernameTooShort_thenThrowValidationException() {
 
         UserRegisterRequest request = new UserRegisterRequest("user", "password");
 
@@ -75,7 +78,8 @@ public class UserServiceTest {
     }
 
     @Test
-    void create_shouldCreateUserSuccessfully() {
+    @DisplayName("Test user is created")
+    void givenUserObject_whenUserSave_thenUserIsCreated() {
         UserRegisterRequest request = new UserRegisterRequest("user123", "password");
         HttpServletRequest httpRequest = Mockito.mock(HttpServletRequest.class);
         HttpSession httpSession = Mockito.mock(HttpSession.class);
@@ -106,6 +110,22 @@ public class UserServiceTest {
         Mockito.verify(authManager).authenticate(any());
         Mockito.verify(httpRequest).getSession(true);
         Mockito.verify(userMapping).toDto(any(User.class));
+
+    }
+
+    @Test
+    @DisplayName("Test user not found by Username")
+    public void givenUserIsNotFound_whenLoadUserByUsername_thenThrowUsernameNotFoundException() {
+        //given
+        CustomUserDetailsService user = new CustomUserDetailsService(userRepository);
+        String username = "RRRrrrr";
+
+        //when
+        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
+
+        //then
+        assertThrows(UsernameNotFoundException.class, () ->
+                user.loadUserByUsername(username));
 
     }
 

@@ -1,12 +1,16 @@
 package rita.controller.resource;
 
-import io.minio.MinioClient;
+import com.sun.net.httpserver.Headers;
+import io.minio.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,18 +24,27 @@ import org.springframework.web.multipart.MultipartFile;
 import rita.dto.BaseResponse;
 import rita.dto.MessageDto;
 import rita.dto.ResourceResponseDto;
+import rita.exeptions.EntityAlreadyExistsException;
 import rita.repository.Type;
 import rita.service.MinioService;
 
+import javax.persistence.EntityNotFoundException;
+import java.io.ByteArrayInputStream;
+import java.io.FilterInputStream;
+import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -46,7 +59,7 @@ class ResourceControllerTest {
 
     private MockMvc mockMvc;
 
-    @MockBean
+    @Autowired
     private MinioService minioService;
 
     @MockBean
@@ -65,67 +78,36 @@ class ResourceControllerTest {
     private final MessageDto pathNotFound = new MessageDto("Русурс не существует");
 
 
+
     @Test
     void downloadResource_success() throws Exception {
-        final String path = "folder/1/file.txt";
         byte[] content = "test file content".getBytes();
+        InputStream inputStream = new ByteArrayInputStream(content);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDispositionFormData("attachment", "file.txt");
-        ResponseEntity<Object> successResponse =
-                new ResponseEntity<>(content, headers, HttpStatus.OK);
+        when(minioClient.getObject(any(GetObjectArgs.class)))
+                .thenAnswer(invocation -> inputStream);
 
-        doReturn(successResponse)
-                .when(minioService)
-                .downloadResource(path);
-        mockMvc.perform(
-                        get(RESOURCE_API)
-                                .param("path", path)
-                )
+        final byte[] msg = "Hello World".getBytes();
+
+
+        mockMvc.perform(get("/api/resource")
+                        .param("path", "folder/file.txt"))
                 .andExpect(status().isOk())
-                .andExpect(header().string(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"file.txt\""
-                ))
                 .andExpect(content().bytes(content));
-        verify(minioService, times(1)).downloadResource(path);
     }
 
-/*    @Test
-    void downloadResource_InvalidPath_BadRequest() throws Exception {
-        final String invalidPath = "///";
 
-        ResponseEntity<Object> badRequestResponse = ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new MessageDto("Невалидный или отсутствующий путь"));
 
-        doReturn(badRequestResponse)
-                .when(minioService)
-                .downloadResource(invalidPath);
 
-        mockMvc.perform(
-                        get(RESOURCE_API)
-                                .param("path", invalidPath)
-                )
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Невалидный или отсутствующий путь"));
-
-        verify(minioService, times(1)).downloadResource(invalidPath);
-    }*/
 
     @Test
     void uploadResource_success() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "object", "file.txt", "text/plain", "test file".getBytes());
 
-        ResponseEntity<Object> createdResponse =
-                ResponseEntity.status(HttpStatus.CREATED)
-                        .body(List.of());
 
-        doReturn(createdResponse)
-                .when(minioService)
-                .uploadFile(anyList(), anyString());
+        when(minioClient.statObject(any(StatObjectArgs.class)))
+                .thenThrow(createNoSuchKeyException());
 
         mockMvc.perform(
                         multipart("/api/resource")
@@ -133,6 +115,7 @@ class ResourceControllerTest {
                                 .param("path", "folder/")
                 )
                 .andExpect(status().isCreated());
+        verify(minioClient, times(1)).putObject(any());
     }
 
     @Test
@@ -145,25 +128,56 @@ class ResourceControllerTest {
                 "test file".getBytes()
         );
 
-        ResponseEntity<Object> conflictResponse =
-                ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(new MessageDto("Файл с таким именем уже существует"));
+        StatObjectResponse mockStat = mock(StatObjectResponse.class);
 
-        doReturn(conflictResponse)
-                .when(minioService)
-                .uploadFile(anyList(), anyString());
+        when(minioClient.statObject(any(StatObjectArgs.class))).thenReturn(mockStat);
 
         mockMvc.perform(
                         multipart("/api/resource")
                                 .file(file)
                                 .param("path", "folder/")
                 )
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Файл с таким именем уже существует"));
+
     }
 
 
     @Test
-    void getInfo() {
+    void getInfo_success_is_folder() throws Exception {
+        String path = "folder/subfolder/";
+        String filename = "subfolder";
+
+        StatObjectResponse mockStat = mock(StatObjectResponse.class);
+
+        when(minioClient.statObject(any(StatObjectArgs.class))).thenReturn(mockStat);
+
+        mockMvc.perform(
+                        get(RESOURCE_API)
+                                .param("path", path)
+                )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("DIRECTORY"))
+                .andExpect(jsonPath("$.name").value("subfolder/"));
+    }
+
+    @Test
+    void getInfo_success_is_file() throws Exception {
+        String path = "folder/file.txt";
+        String filename = "file.txt";
+
+        StatObjectResponse mockStat = mock(StatObjectResponse.class);
+
+        when(minioClient.statObject(any(StatObjectArgs.class))).thenReturn(mockStat);
+
+        mockMvc.perform(
+                        get(RESOURCE_API)
+                                .param("path", path)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("FILE"))
+                .andExpect(jsonPath("$.name").value("file.txt"));
     }
 
     @Test
@@ -177,4 +191,15 @@ class ResourceControllerTest {
     @Test
     void searchResource() {
     }
+
+    private io.minio.errors.ErrorResponseException createNoSuchKeyException() {
+        io.minio.messages.ErrorResponse errorResponse = new io.minio.messages.ErrorResponse(
+                "NoSuchKey",
+                "The specified key does not exist.",
+                "bucketName",
+                null, null, null, null
+        );
+        return new io.minio.errors.ErrorResponseException(errorResponse, null, null);
+    }
+
 }
