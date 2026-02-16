@@ -1,8 +1,13 @@
+
 spring:
   application:
     name: Project6
   cache:
     type: redis
+  servlet:
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
 
   datasource:
     url: jdbc:postgresql://localhost:5433/Project6
@@ -36,4 +41,13 @@ logging:
 
   level:
     root: INFO
-    org.springframework: TRACE
+    org.springframework: debug
+
+minio:
+  url: http://localhost:9000
+  access-key: admin
+  secret-key: adminadmin
+  bucket: user-files
+
+liquibase:
+  change-log: classpath:db/changelog/db.changelog-master.yaml

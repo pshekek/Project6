@@ -1,11 +1,13 @@
 package rita.dto;
 
+
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter
 @Getter
-public class UserDto {
-    private long id;
+@Setter
+@AllArgsConstructor
+public class UsernameResponse {
     private String username;
 }
