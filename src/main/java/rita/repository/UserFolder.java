@@ -22,5 +22,4 @@ public class UserFolder {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
 
-
 }

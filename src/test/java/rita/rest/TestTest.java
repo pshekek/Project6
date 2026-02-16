@@ -1,4 +1,4 @@
-package rita.controller.resource;
+package rita.rest;
 
 import org.junit.jupiter.api.Test;
 

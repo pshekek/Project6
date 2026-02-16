@@ -110,26 +110,32 @@ public class MinioService {
                         .build()
         );
         boolean hasFiles = false;
-        for (Result<Item> result : results) {
-            try {
+
+        try {
+            for (Result<Item> result : results) {
                 Item item = result.get();
                 hasFiles = true;
-                try {
-                    minioClient.removeObject(
-                            RemoveObjectArgs.builder()
-                                    .bucket("user-files")
-                                    .object(item.objectName())
-                                    .build()
-                    );
-                } catch (Exception e) {
-                    throw new RuntimeException("Ошибка удаления из minio", e);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException("Ошибка удаления из minio", e);
+
+                minioClient.removeObject(
+                        RemoveObjectArgs.builder()
+                                .bucket("user-files")
+                                .object(item.objectName())
+                                .build()
+                );
             }
+
+            if (!hasFiles) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new MessageDto("Ресурс не найден"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageDto("Ошибка при удалении ресурсов: " + e.getMessage()));
         }
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
+
+
 
     public ResponseEntity<?> downloadResource(String clientPath) {
 

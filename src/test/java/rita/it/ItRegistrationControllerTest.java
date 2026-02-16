@@ -1,14 +1,10 @@
-package rita.controller.user;
+package rita.it;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.minio.MinioClient;
-import liquibase.pro.packaged.S;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.test.context.support.WithSecurityContextTestExecutionListener;
@@ -18,13 +14,10 @@ import org.springframework.test.context.web.ServletTestExecutionListener;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import rita.dto.UserRegisterRequest;
 import rita.repository.UserRepository;
-import rita.service.MinioService;
 
-import javax.servlet.http.Cookie;
 import javax.transaction.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +36,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
         WithSecurityContextTestExecutionListener.class},
         mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)
 @Transactional
-class RegistrationControllerTest {
+class ItRegistrationControllerTest {
 
     @Autowired
     private WebApplicationContext wac;

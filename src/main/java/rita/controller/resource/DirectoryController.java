@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import rita.service.MinioService;
 
-import java.security.Principal;
-
 
 @RestController
 @RequiredArgsConstructor
