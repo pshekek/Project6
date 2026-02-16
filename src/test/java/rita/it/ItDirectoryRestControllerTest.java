@@ -49,7 +49,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
-public class ItDirectoryRestControllerTest extends AbstractControllerBaseTest{
+public class ItDirectoryRestControllerTest extends AbstractControllerBaseTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -117,8 +117,10 @@ public class ItDirectoryRestControllerTest extends AbstractControllerBaseTest{
 
     @Test
     @DisplayName("Test Create empty Folder when path already exist functionality")
-    public void givenExistingClientPath_whenCreateEmptyDirectory_thenConflictResponse() throws Exception{
+    public void givenExistingClientPath_whenCreateEmptyDirectory_thenConflictResponse()
+            throws Exception {
 
+        given(authenticationHelper.getCurrentUserId()).willReturn(1L);
 
         mockMvc.perform(post("/api/directory")
                 .with(csrf())
@@ -127,11 +129,12 @@ public class ItDirectoryRestControllerTest extends AbstractControllerBaseTest{
 
         mockMvc.perform(post("/api/directory")
                         .with(csrf())
+                        .with(user("testUser").roles("USER"))
                         .param("path", "path/folder/"))
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(MockMvcResultMatchers.status().isConflict())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.message", CoreMatchers.is("Файл с таким именем уже существует")));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message",
+                        CoreMatchers.is("Файл с таким именем уже существует")));
     }
 
 }
-
