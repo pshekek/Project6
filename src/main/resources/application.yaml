@@ -10,9 +10,9 @@ spring:
       max-request-size: 1GB
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/Project6
-    username: root
-    password: root
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
@@ -24,8 +24,8 @@ spring:
 
   data:
     redis:
-      port: 6380
-      host: localhost
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
 
   jackson:
     serialization:
@@ -44,10 +44,10 @@ logging:
     org.springframework: debug
 
 minio:
-  url: http://localhost:9000
-  access-key: admin
-  secret-key: adminadmin
-  bucket: user-files
+  url: ${MINIO_URL}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
+  bucket: ${MINIO_BUCKET}
 
 liquibase:
   change-log: classpath:db/changelog/db.changelog-master.yaml

@@ -11,7 +11,6 @@ import rita.repository.Type;
 @AllArgsConstructor
 @EqualsAndHashCode
 public class ResourceResponseDto {
-
     private String path;
     private String name;
     private Long size;
