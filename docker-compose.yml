@@ -1,12 +1,16 @@
 version: '3.8'
 
 services:
-#  backend:
-#    build: .
-#    container_name: project6-backend
-#    env_file: .env
-#    ports:
-#      - "8080:8080"
+  backend:
+    build: .
+    container_name: project6-backend
+    env_file: .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+      - minio
 
   redis:
     image: redis:latest

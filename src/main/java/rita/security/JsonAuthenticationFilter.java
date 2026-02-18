@@ -14,6 +14,7 @@ import java.util.Map;
 
 public class JsonAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public JsonAuthenticationFilter(AuthenticationManager authenticationManager) {
