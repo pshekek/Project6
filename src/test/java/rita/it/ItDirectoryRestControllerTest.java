@@ -134,7 +134,7 @@ public class ItDirectoryRestControllerTest extends AbstractControllerBaseTest {
                 .andDo(MockMvcResultHandlers.print())
                 .andExpect(MockMvcResultMatchers.status().isConflict())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.message",
-                        CoreMatchers.is("Файл с таким именем уже существует")));
+                        CoreMatchers.is("Папка с таким именем уже существует")));
     }
 
 }

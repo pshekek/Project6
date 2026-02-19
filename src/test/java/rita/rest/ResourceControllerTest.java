@@ -13,7 +13,7 @@ import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import rita.TestSecurityConfig;
+
 import rita.dto.MessageDto;
 import rita.dto.ResourceResponseDto;
 import rita.repository.Type;
@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @WithUserDetails(value = "testuser", userDetailsServiceBeanName = "testUserDetailsService")
-@Import(TestSecurityConfig.class)
+@Import(rita.config.TestSecurityConfig.class)
 class ResourceControllerTest {
 
     private static final String RESOURCE_API = "/api/resource";
@@ -40,9 +40,6 @@ class ResourceControllerTest {
     private WebApplicationContext wac;
 
     private MockMvc mockMvc;
-
-    @Autowired
-    private MinioService minioService;
 
     @MockBean
     private MinioClient minioClient;
@@ -63,23 +60,25 @@ class ResourceControllerTest {
 
     @Test
     void downloadResource_success() throws Exception {
-        byte[] content = "test file content".getBytes();
+        byte[] content = "писька".getBytes();
         InputStream inputStream = new ByteArrayInputStream(content);
+
+        StatObjectResponse mockStat = mock(StatObjectResponse.class);
+
+        when(minioClient.statObject(any(StatObjectArgs.class))).thenReturn(mockStat);
 
         when(minioClient.getObject(any(GetObjectArgs.class)))
                 .thenAnswer(invocation -> inputStream);
 
-        final byte[] msg = "Hello World".getBytes();
+
+        final byte[] msg = "писька".getBytes();
 
 
-        mockMvc.perform(get("/api/resource")
+        mockMvc.perform(get("/api/resource/download")
                         .param("path", "folder/file.txt"))
                 .andExpect(status().isOk())
                 .andExpect(content().bytes(content));
     }
-
-
-
 
 
     @Test
